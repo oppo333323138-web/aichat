@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYS_TERMINAL_v3.1</title>
+
+<style>
+
+body{
+    margin:0;
+    background:black;
+    color:#00ff88;
+    font-family:Consolas,monospace;
+}
+
+canvas{
+    position:fixed;
+    top:0;
+    left:0;
+    z-index:0;
+}
+
+.container{
+    position:relative;
+    z-index:2;
+    padding:20px;
+}
+
+.login-box{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#000;
+    padding:30px;
+    border:1px solid #00ff88;
+}
+
+input{
+    background:black;
+    color:#00ff88;
+    border:1px solid #00ff88;
+    padding:8px;
+    outline:none;
+}
+
+button{
+    background:black;
+    border:1px solid #00ff88;
+    color:#00ff88;
+    padding:5px 15px;
+    margin-top:10px;
+    cursor:pointer;
+}
+
+#chatOutput{
+    max-height:320px;
+    overflow-y:auto;
+    border:1px solid #00ff88;
+    padding:10px;
+    margin-top:10px;
+}
+
+/* 修复空格问题 */
+#chatOutput div{
+    margin:4px 0;
+    line-height:1.4;
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas id="matrix"></canvas>
+
+<!-- 登录 -->
+<div class="login-box" id="loginBox">
+<h3>SECURE LOGIN</h3>
+<input type="text" id="user" placeholder="username"><br><br>
+<input type="password" id="pass" placeholder="password"><br>
+<button onclick="login()">LOGIN</button>
+</div>
+
+<div class="container" id="main" style="display:none;">
+<h2 id="typewriter"></h2>
+<div id="time"></div>
+<div id="ip"></div>
+<button onclick="toggleLogs(this)" style="margin-top: 15px;">▶ 关于更多</button>
+<div id="sysLogs"></div>
+<h2 id="typewriter"></h2>
+<div id="time"></div>
+<div id="ip"></div>
+
+<p>AI聊天机器人：</p>
+
+<select id="modelSelect" style="
+background:black;
+color:#00ff88;
+border:1px solid #00ff88;
+padding:5px;
+">
+
+<option value="deepseek-chat">DeepSeek Chat（通用）</option>
+<option value="deepseek-reasoner">DeepSeek Reasoner（推理）</option>
+
+
+</select>
+
+<br><br>
+
+<input
+id="chatInput"
+placeholder="输入内容按回车发送..."
+onkeydown="chat(event)"
+style="width:80%;"
+>
+
+<div id="chatOutput"></div>
+
+</div>
+
+<script>
+
+/* 登录状态 */
+window.onload=function(){
+
+if(localStorage.getItem("isLogin")==="true"){
+loginSuccess();
+}
+
+}
+
+/* 登录 */
+
+function login(){
+
+const u=document.getElementById("user").value;
+const p=document.getElementById("pass").value;
+
+if(u==="admin" && p==="1234"){
+
+localStorage.setItem("isLogin","true");
+loginSuccess();
+
+}else{
+
+alert("ACCESS DENIED");
+
+}
+
+}
+
+function loginSuccess(){
+
+document.getElementById("loginBox").style.display="none";
+document.getElementById("main").style.display="block";
+
+}
+
+/* 打字机 */
+
+const text="Welcome, Static. System Online.";
+let i=0;
+
+function type(){
+
+if(i<text.length){
+
+document.getElementById("typewriter").innerHTML+=text.charAt(i);
+i++;
+setTimeout(type,40);
+
+}
+
+}
+
+type();
+
+/* 时间 */
+
+function updateTime(){
+
+const now=new Date();
+
+document.getElementById("time").innerText=
+"当前时间: "+now.toLocaleString();
+
+}
+
+
+
+const sysSignature = `
+[ 签名信息 ]
+USER_ID   : li
+LEVEL     : 17
+SPECIALTY : Network Construction
+LOCATION  : Hebei, China
+`;
+
+const devLogsText = `[ 更新日志 ]
+[2026-02-25] 启动项目开发，确立 Terminal 视觉基调。
+[2026-02-26] 集成 IP 探针，成功接入地理位置解析。
+[2026-02-27] 增加登录校验，实现状态持久化。
+[2026-02-28] 优化打字机渲染，修复移动端适配。
+[2026-03-17] 版本 v3.1。接入 DeepSeek 推理模型。
+[2026-03-17] 开源开放，代码托管至 GitHub。<a href="https://github.com/oppo333323138-web/aichat/tree/main">点击前往</a>
+              代码不再是封闭的孤岛         `;
+
+const securityNotice = `
+
+[ 免责声明与安全警告 ]
+-----------------------------------------------------------
+1. 本项目为开源学习交流使用，AI聊天机器人功能依赖 DeepSeek 官方 API。
+2. 为纯前端实现，API Key 存储于代码或浏览器本地。
+   请勿在公共设备上运行本项目，或将包含私钥的代码分发给他人。
+3. 开发者不对因 API Key 泄露导致的财产损失负责。
+4. AI聊天机器人功能需要自行前往官网申请 Key 并在本地配置。<a href="https://platform.deepseek.com/api_keys" target="_blank" style="color: #00ff88; text-decoration: underline;">点击前往</a>
+5. 受限于作者当前的技术水平，本项目仍有许多不足之处。
+   恳请有能力的朋友进行二次开发，并强烈建议改用后端中转方式调用 API，以确保安全。
+-----------------------------------------------------------`;
+/* 思考折叠修复版 */
+function toggleThinking(id, btn) {
+    const box = document.getElementById(id);
+    if (!box) {
+        console.error("未找到对应的思考框 ID:", id);
+        return;
+    }
+
+    if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "block";
+        btn.innerText = "▼ 收起思考";
+    } else {
+        box.style.display = "none";
+        btn.innerText = "▶ 展开思考";
+    }
+}
+
+/* Matrix */
+
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+
+canvas.height=window.innerHeight;
+canvas.width=window.innerWidth;
+
+const letters="01";
+const fontSize=14;
+const columns=canvas.width/fontSize;
+
+const drops=[];
+
+for(let x=0;x<columns;x++) drops[x]=1;
+
+function draw(){
+
+ctx.fillStyle="rgba(0,0,0,0.05)";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ctx.fillStyle="#00ff88";
+ctx.font=fontSize+"px monospace";
+
+for(let i=0;i<drops.length;i++){
+
+const text=letters.charAt(Math.random()*letters.length);
+
+ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+
+if(drops[i]*fontSize>canvas.height && Math.random()>0.975)
+drops[i]=0;
+
+drops[i]++;
+
+}
+
+}
+
+setInterval(draw,33);
+
+/* 思考折叠 */
+
+function toggleLogs(btn) {
+    const el = document.getElementById("sysLogs");
+    if (el.style.display === "none" || el.style.display === "") {
+        el.style.display = "block";
+        
+        // 强制应用保留换行符的样式
+        el.style.whiteSpace = "pre-wrap"; 
+        el.style.textAlign = "left";
+        
+        // 组合内容
+        el.innerHTML = sysSignature + "\n" + devLogsText + "\n" + securityNotice;
+        btn.innerHTML = "▼ 收起";
+    } else {
+        el.style.display = "none";
+        btn.innerHTML = "▶ 关于更多";
+    }
+}
+
+/* AI渲染 */
+
+function renderAI(thinking,answer){
+
+const id="think_"+Math.random().toString(36).slice(2,7);
+
+let thinkHTML="";
+
+if(thinking && thinking.trim()!==""){
+
+thinkHTML=`
+<div>
+<button onclick="toggleThinking('${id}',this)">
+▶ 展开思考
+</button>
+
+<div id="${id}" style="
+display:none;
+border:1px dashed #00ff88;
+padding:8px;
+white-space:pre-wrap;
+margin-top:4px;
+">
+${thinking.trim()}
+</div>
+</div>
+`;
+
+}
+
+return `
+<div>
+${thinkHTML}
+<div style="white-space:pre-wrap">
+${answer.trim()}
+</div>
+</div>
+`;
+
+}
+
+/* API KEY */
+
+const DEEPSEEK_KEY = "sk-6835736f82aa43959f69c8a3b2d1a4db";  
+
+  
+
+/* 聊天 */
+
+async function chat(e){
+
+if(e.key!=="Enter") return;
+
+const input=e.target.value.trim();
+if(!input) return;
+
+const out=document.getElementById("chatOutput");
+
+const model=document.getElementById("modelSelect").value;
+
+out.innerHTML+=`<div>> ${input}</div>`;
+
+e.target.value="";
+
+const aiLine=document.createElement("div");
+
+out.appendChild(aiLine);
+
+out.scrollTop=out.scrollHeight;
+
+let finalAnswer="";
+let thinking="";
+
+try{
+
+/* DeepSeek */
+
+if(model.startsWith("deepseek")){
+
+const res=await fetch(
+"https://api.deepseek.com/v1/chat/completions",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+DEEPSEEK_KEY
+},
+body:JSON.stringify({
+model:model,
+stream:true,
+messages:[
+{role:"user",content:input}
+]
+})
+});
+
+const reader=res.body.getReader();
+const decoder=new TextDecoder();
+
+while(true){
+
+const {done,value}=await reader.read();
+if(done) break;
+
+const chunk=decoder.decode(value);
+
+const lines=chunk.split("\n");
+
+for(const line of lines){
+
+if(line.startsWith("data:")){
+
+const data=line.replace("data:","").trim();
+
+if(data==="[DONE]") break;
+
+try{
+
+const json=JSON.parse(data);
+
+const reason=json.choices?.[0]?.delta?.reasoning_content;
+
+if(reason) thinking+=reason;
+
+const content=json.choices?.[0]?.delta?.content;
+
+if(content){
+
+finalAnswer+=content.replace(/^\n+/,"");
+
+aiLine.innerHTML=renderAI(thinking,finalAnswer);
+
+out.scrollTop=out.scrollHeight;
+
+}
+
+}catch{}
+
+}
+
+}
+
+}
+
+}
+
+/* Gemini */
+
+else{
+
+const res=await fetch(
+"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+GEMINI_KEY,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+contents:[
+{parts:[{text:input}]}
+]
+})
+});
+
+const data=await res.json();
+
+finalAnswer=
+data.candidates?.[0]?.content?.parts?.map(p=>p.text).join("")
+||"Gemini返回异常";
+
+aiLine.innerHTML=renderAI("",finalAnswer);
+
+}
+
+}catch(err){
+
+aiLine.innerText="⚠️ AI调用失败";
+
+console.error(err);
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
